@@ -1,7 +1,11 @@
 import pandas as pd
-import torch
 from sklearn.model_selection import train_test_split
-from transformers import DebertaTokenizer, Trainer, TrainingArguments
+import torch
+from transformers import (
+    AutoTokenizer,
+    Trainer,
+    TrainingArguments,
+)
 from src.dataset import ReviewDataset
 from src.model import DebertaClassifier
 
@@ -12,11 +16,11 @@ labels = df["label"].tolist()
 
 # Train-test split
 train_texts, val_texts, train_labels, val_labels = train_test_split(
-    texts, labels, test_size=0.2
+    texts, labels, test_size=0.2, random_state=42, stratify=labels
 )
 
 # Tokenizer
-tokenizer = DebertaTokenizer.from_pretrained("microsoft/deberta-v3-base")
+tokenizer = AutoTokenizer.from_pretrained("microsoft/deberta-base")
 train_encodings = tokenizer(train_texts, truncation=True, padding=True, max_length=256)
 val_encodings = tokenizer(val_texts, truncation=True, padding=True, max_length=256)
 
@@ -29,7 +33,7 @@ model = DebertaClassifier()
 
 training_args = TrainingArguments(
     output_dir="./results",
-    evaluation_strategy="epoch",
+    eval_strategy="epoch",
     learning_rate=2e-5,
     per_device_train_batch_size=16,
     num_train_epochs=3,
@@ -49,4 +53,4 @@ trainer = Trainer(
 
 if __name__ == "__main__":
     trainer.train()
-    trainer.save_model("./saved_model")
+    torch.save(model.state_dict(), "./saved_model/model.pth")
