@@ -1,0 +1,18 @@
+[project]
+name = "nlp-review-classifier"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "datasets>=4.0.0",
+    "matplotlib>=3.10.5",
+    "mealpy>=3.0.3",
+    "scikit-learn>=1.7.1",
+    "seaborn>=0.13.2",
+    "shap>=0.48.0",
+    "spacy>=3.8.7",
+    "streamlit>=1.49.0",
+    "torch>=2.8.0",
+    "transformers>=4.55.4",
+]
