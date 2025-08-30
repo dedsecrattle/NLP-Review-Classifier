@@ -184,6 +184,34 @@ flowchart TD
 - **Multimodal**: Concatenate text + image features → Classification head
 - **Text-only**: Direct text features → Classification head
 
+## 📚 References & Datasets
+
+This project leverages several key datasets and research works:
+
+### Datasets Used
+
+**Amazon Fake Review Dataset**
+- Large-scale collection of authentic and fake Amazon product reviews
+- Contains both truthful customer reviews and artificially generated deceptive reviews
+- Includes product metadata and review characteristics for comprehensive analysis
+
+**Deceptive Opinion Spam Dataset**
+- Benchmark dataset for deceptive review detection research
+- Contains hotel reviews labeled as truthful or deceptive
+- Widely used in academic research for opinion spam detection
+
+### Key Research Papers
+
+- **DeBERTa**: *DeBERTa: Decoding-enhanced BERT with Disentangled Attention* - Microsoft Research
+- **Deceptive Opinion Detection**: Research on identifying fake reviews and opinion spam
+- **Multimodal Fusion**: Studies on combining text and visual features for improved classification
+
+### Model References
+
+- **microsoft/deberta-v3-base**: Pre-trained transformer model from Hugging Face
+- **ResNet18**: Deep residual learning architecture for image feature extraction
+- **Color Histogram**: Traditional computer vision technique for image representation
+
 ## 📌 To Do / Extensions
 
 - Batch inference (upload CSV → download predictions)
