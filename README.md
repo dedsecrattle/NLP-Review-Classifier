@@ -58,13 +58,13 @@ streamlit run streamlit_app.py
 
 Upload a CSV with at least these columns:
 
-- **`text`** → review text
+- **`review`** → review text
 - **`label`** → must be either `truthful` or `deceptive`
 - **`photo`** *(optional)* → relative/absolute path to image files
 
 Example:
 
-| text                               | label     | photo            |
+| review                               | label     | photo            |
 |------------------------------------|-----------|------------------|
 | "The food was amazing!"            | truthful  | imgs/review1.jpg |
 | "Best restaurant in town! 50% OFF" | deceptive | imgs/promo.png   |
