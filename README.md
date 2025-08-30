@@ -102,7 +102,7 @@ Two modes:
   - Default = `deberta-v3-base`
   - Can switch to smaller (e.g., `deberta-v3-small`) for faster training
 
-## 📊 Example Metrics Output
+## 📊 Metrics on (Amazon + Deceptive Opinion)
 
 ```json
 {
