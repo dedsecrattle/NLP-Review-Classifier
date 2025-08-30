@@ -2,7 +2,8 @@ streamlit>=1.36
 pandas>=2.2
 numpy>=1.26
 scikit-learn>=1.4
-
+sentencepiece>=0.2
+protobuf>=4.25
 torch>=2.2
 torchvision>=0.17
 transformers>=4.42

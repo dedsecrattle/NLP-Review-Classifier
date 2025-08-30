@@ -26,6 +26,7 @@ def preprocess_text(text: str) -> str:
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
+
 # ───────────────────────────────
 # Config
 # ───────────────────────────────
@@ -45,14 +46,16 @@ def get_resnet18_encoder():
     model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
     model.fc = nn.Identity()
     model.eval()
-    tfm = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225]),
-    ])
+    tfm = transforms.Compose(
+        [
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
     return model, tfm
+
 
 def read_image(path: str):
     try:
@@ -60,15 +63,19 @@ def read_image(path: str):
     except Exception:
         return None
 
+
 def image_feat_histogram(img, bins_per_channel=8):
     arr = np.asarray(img)
     if arr.ndim != 3 or arr.shape[2] != 3:
-        arr = np.stack([arr]*3, axis=-1)
+        arr = np.stack([arr] * 3, axis=-1)
     hist = []
     for ch in range(3):
-        h, _ = np.histogram(arr[:, :, ch], bins=bins_per_channel, range=(0, 255), density=True)
+        h, _ = np.histogram(
+            arr[:, :, ch], bins=bins_per_channel, range=(0, 255), density=True
+        )
         hist.append(h)
     return np.concatenate(hist).astype("float32")
+
 
 def extract_image_features(paths, method="ResNet18", base_dir=None):
     feats = []
@@ -111,7 +118,7 @@ class DebertaWithImage(nn.Module):
             nn.Linear(fused_dim, fused_dim // 2),
             nn.ReLU(),
             nn.Dropout(0.2),
-            nn.Linear(fused_dim // 2, num_labels)
+            nn.Linear(fused_dim // 2, num_labels),
         )
 
     def forward(self, input_ids, attention_mask, img_feats=None):
@@ -140,10 +147,12 @@ class ReviewDataset(Dataset):
         return len(self.texts)
 
     def __getitem__(self, idx):
-        enc = self.tokenizer(self.texts[idx],
-                             truncation=True,
-                             padding="max_length",
-                             max_length=self.max_len)
+        enc = self.tokenizer(
+            self.texts[idx],
+            truncation=True,
+            padding="max_length",
+            max_length=self.max_len,
+        )
         item = {k: torch.tensor(v) for k, v in enc.items()}
         item["labels"] = torch.tensor(self.labels[idx])
         if self.imgs is not None:
@@ -154,9 +163,18 @@ class ReviewDataset(Dataset):
 # ───────────────────────────────
 # Training Loop with Progress + Metrics
 # ───────────────────────────────
-def train_model(df, text_col, label_col, photo_col, use_images, image_method, base_dir,
-                num_epochs=3, batch_size=8, lr=2e-5):
-
+def train_model(
+    df,
+    text_col,
+    label_col,
+    photo_col,
+    use_images,
+    image_method,
+    base_dir,
+    num_epochs=3,
+    batch_size=8,
+    lr=2e-5,
+):
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=False)
     texts = df[text_col].astype(str).apply(preprocess_text).tolist()
     labels = df[label_col].map(LABEL2ID).tolist()
@@ -165,26 +183,40 @@ def train_model(df, text_col, label_col, photo_col, use_images, image_method, ba
     img_dim = 0
     if use_images and photo_col in df.columns:
         paths = df[photo_col].astype(str).tolist()
-        img_feats = extract_image_features(paths, method=image_method, base_dir=base_dir)
+        img_feats = extract_image_features(
+            paths, method=image_method, base_dir=base_dir
+        )
         img_dim = img_feats.shape[1]
 
     # Split
-    train_texts, val_texts, train_labels, val_labels, train_imgs, val_imgs = train_test_split(
-        texts, labels, img_feats if img_feats is not None else [None]*len(texts),
-        test_size=0.2, random_state=42, stratify=labels
+    train_texts, val_texts, train_labels, val_labels, train_imgs, val_imgs = (
+        train_test_split(
+            texts,
+            labels,
+            img_feats if img_feats is not None else [None] * len(texts),
+            test_size=0.2,
+            random_state=42,
+            stratify=labels,
+        )
     )
 
-    train_ds = ReviewDataset(train_texts, train_labels, tokenizer,
-                             train_imgs if img_feats is not None else None)
-    val_ds = ReviewDataset(val_texts, val_labels, tokenizer,
-                           val_imgs if img_feats is not None else None)
+    train_ds = ReviewDataset(
+        train_texts,
+        train_labels,
+        tokenizer,
+        train_imgs if img_feats is not None else None,
+    )
+    val_ds = ReviewDataset(
+        val_texts, val_labels, tokenizer, val_imgs if img_feats is not None else None
+    )
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=batch_size)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = DebertaWithImage(MODEL_NAME, num_labels=len(CATEGORIES),
-                             use_images=use_images, img_dim=img_dim).to(device)
+    model = DebertaWithImage(
+        MODEL_NAME, num_labels=len(CATEGORIES), use_images=use_images, img_dim=img_dim
+    ).to(device)
 
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=0.05)
 
@@ -216,7 +248,7 @@ def train_model(df, text_col, label_col, photo_col, use_images, image_method, ba
             avg_loss = total_loss / i
             batch_bar.progress(i / batch_count)
             status_placeholder.text(
-                f"Epoch {epoch+1}/{num_epochs} | Batch {i}/{batch_count} | Loss: {avg_loss:.4f}"
+                f"Epoch {epoch + 1}/{num_epochs} | Batch {i}/{batch_count} | Loss: {avg_loss:.4f}"
             )
 
         # 🔹 Reset batch bar for next epoch
@@ -237,13 +269,15 @@ def train_model(df, text_col, label_col, photo_col, use_images, image_method, ba
                 preds.extend(p)
                 gts.extend(labels.cpu().numpy())
 
-        report = classification_report(gts, preds, target_names=CATEGORIES, output_dict=True)
+        report = classification_report(
+            gts, preds, target_names=CATEGORIES, output_dict=True
+        )
         final_report = report
 
         # 🔹 Update epoch progress + validation metrics
         epoch_bar.progress((epoch + 1) / num_epochs)
         status_placeholder.text(
-            f"✅ Epoch {epoch+1}/{num_epochs} finished | Train Loss: {avg_loss:.4f} | Val F1: {report['macro avg']['f1-score']:.4f}"
+            f"✅ Epoch {epoch + 1}/{num_epochs} finished | Train Loss: {avg_loss:.4f} | Val F1: {report['macro avg']['f1-score']:.4f}"
         )
 
     # Save model + tokenizer + config
@@ -251,7 +285,14 @@ def train_model(df, text_col, label_col, photo_col, use_images, image_method, ba
     torch.save(model.state_dict(), os.path.join(SAVE_DIR, "model_weights.pt"))
     tokenizer.save_pretrained(SAVE_DIR)
     with open(os.path.join(SAVE_DIR, "image_config.json"), "w") as f:
-        json.dump({"use_images": use_images, "image_method": image_method, "img_dim": img_dim}, f)
+        json.dump(
+            {
+                "use_images": use_images,
+                "image_method": image_method,
+                "img_dim": img_dim,
+            },
+            f,
+        )
 
     return final_report
 
@@ -262,20 +303,29 @@ def train_model(df, text_col, label_col, photo_col, use_images, image_method, ba
 def load_model_for_inference():
     tokenizer = AutoTokenizer.from_pretrained(SAVE_DIR, use_fast=False)
     cfg = json.load(open(os.path.join(SAVE_DIR, "image_config.json")))
-    model = DebertaWithImage(MODEL_NAME, num_labels=len(CATEGORIES),
-                             use_images=cfg["use_images"], img_dim=cfg["img_dim"])
+    model = DebertaWithImage(
+        MODEL_NAME,
+        num_labels=len(CATEGORIES),
+        use_images=cfg["use_images"],
+        img_dim=cfg["img_dim"],
+    )
     state = torch.load(os.path.join(SAVE_DIR, "model_weights.pt"), map_location="cpu")
     model.load_state_dict(state)
     model.eval()
     return tokenizer, model, cfg
 
+
 def predict_texts(texts, photo_paths=None, base_dir=None):
     texts = [preprocess_text(t) for t in texts]
     tokenizer, model, cfg = load_model_for_inference()
-    enc = tokenizer(texts, truncation=True, padding=True, max_length=256, return_tensors="pt")
+    enc = tokenizer(
+        texts, truncation=True, padding=True, max_length=256, return_tensors="pt"
+    )
     img_feats = None
     if cfg["use_images"] and photo_paths:
-        img_feats = extract_image_features(photo_paths, method=cfg["image_method"], base_dir=base_dir)
+        img_feats = extract_image_features(
+            photo_paths, method=cfg["image_method"], base_dir=base_dir
+        )
         img_feats = torch.tensor(img_feats, dtype=torch.float32)
     with torch.no_grad():
         logits = model(enc["input_ids"], enc["attention_mask"], img_feats)
@@ -291,7 +341,7 @@ st.title("🕵️ Truthful vs Deceptive Review Classifier (DeBERTa + Optional Im
 
 with st.sidebar:
     csv_file = st.file_uploader("Upload CSV", type=["csv"])
-    col_text = st.text_input("Text column", "text")
+    col_text = st.text_input("Review column", "review")
     col_label = st.text_input("Label column", "label")
     col_photo = st.text_input("Photo column (optional)", "photo")
 
@@ -300,7 +350,9 @@ with st.sidebar:
     lr = st.selectbox("Learning rate", [5e-5, 3e-5, 2e-5, 1e-5, 1e-6], index=2)
 
     use_images = st.checkbox("Use images", value=False)
-    image_method = st.selectbox("Image features", ["ResNet18", "ColorHistogram", "None"], index=0)
+    image_method = st.selectbox(
+        "Image features", ["ResNet18", "ColorHistogram", "None"], index=0
+    )
     base_dir = st.text_input("Image base dir (optional)", "")
 
     btn_train = st.button("Train Model")
@@ -313,9 +365,18 @@ if csv_file:
         if df.empty:
             st.error(f"Label column must contain: {CATEGORIES}")
         else:
-            report = train_model(df, col_text, col_label, col_photo,
-                                 use_images, image_method, base_dir,
-                                 num_epochs=num_epochs, batch_size=batch_size, lr=lr)
+            report = train_model(
+                df,
+                col_text,
+                col_label,
+                col_photo,
+                use_images,
+                image_method,
+                base_dir,
+                num_epochs=num_epochs,
+                batch_size=batch_size,
+                lr=lr,
+            )
             st.success("✅ Training complete. Model saved in saved_model/")
             st.write("### Evaluation Report (Validation Set)")
             st.json(report)
@@ -323,7 +384,9 @@ if csv_file:
 # Inference
 st.subheader("🔮 Quick Inference")
 user_txt = st.text_area("Enter review text")
-uploaded_img = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"])
+uploaded_img = st.file_uploader(
+    "Upload an image (optional)", type=["jpg", "jpeg", "png"]
+)
 tmp_path = None
 if uploaded_img:
     tmp_path = "uploaded_tmp.png"
@@ -337,6 +400,8 @@ if st.button("Classify Review"):
         st.warning("Enter review text.")
     else:
         img_path = tmp_path if tmp_path else None
-        labels, probs = predict_texts([user_txt], photo_paths=[img_path] if img_path else None, base_dir=base_dir)
+        labels, probs = predict_texts(
+            [user_txt], photo_paths=[img_path] if img_path else None, base_dir=base_dir
+        )
         st.write("**Prediction:**", labels[0])
         st.json({CATEGORIES[i]: float(probs[0][i]) for i in range(len(CATEGORIES))})
