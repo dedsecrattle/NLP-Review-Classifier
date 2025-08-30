@@ -37,34 +37,65 @@ datasets>=2.20
 Pillow>=10.3
 ```
 
-Install with:
+### Installation Steps
 
+1. **Create a virtual environment** (recommended):
+```bash
+# Create virtual environment
+python -m venv truthful_deceptive_env
+
+# Activate virtual environment
+# On Windows:
+truthful_deceptive_env\Scripts\activate
+# On macOS/Linux:
+source truthful_deceptive_env/bin/activate
+```
+
+2. **Install dependencies**:
 ```bash
 pip install -r requirements.txt
 ```
 
+3. **Verify installation** (optional):
+```bash
+python -c "import streamlit, torch, transformers; print('All dependencies installed successfully!')"
+```
+
 ## 🚀 How to Run
 
-1. Clone this repo and install requirements
-2. Start Streamlit:
+1. **Clone this repository**:
+```bash
+git clone <repository-url>
+cd truthful-deceptive-classifier
+```
 
+2. **Set up environment** (follow installation steps above)
+
+3. **Start Streamlit**:
 ```bash
 streamlit run streamlit_app.py
 ```
 
-3. Open the app in your browser (default: [http://localhost:8501](http://localhost:8501))
+4. **Open the app** in your browser (default: [http://localhost:8501](http://localhost:8501))
+
+### Deactivating Environment
+
+When you're done, deactivate the virtual environment:
+```bash
+deactivate
+```
 
 ## 📂 Data Format
 
 Upload a CSV with at least these columns:
 
-- **`review`** → review text
+- **`text`** → review text
 - **`label`** → must be either `truthful` or `deceptive`
 - **`photo`** *(optional)* → relative/absolute path to image files
 
 Example:
 
-| review                               | label     | photo            |
+| text                               | label     | photo            |
 |------------------------------------|-----------|------------------|
 | "The food was amazing!"            | truthful  | imgs/review1.jpg |
 | "Best restaurant in town! 50% OFF" | deceptive | imgs/promo.png   |
@@ -102,7 +133,7 @@ Two modes:
   - Default = `deberta-v3-base`
   - Can switch to smaller (e.g., `deberta-v3-small`) for faster training
 
-## 📊 Metrics on (Amazon + Deceptive Opinion)
+## 📊 Example Metrics Output
 
 ```json
 {
